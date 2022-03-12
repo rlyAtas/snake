@@ -26,7 +26,7 @@ void play_game() {
 	clock_gettime(CLOCK_REALTIME, &time_start);
     while (go_game) {
         clock_gettime(CLOCK_REALTIME, &time_now);
-        if (get_delta_time(time_start, time_now) > snake.speed) {
+        if (get_delta_time(time_start, time_now, snake.direction) > snake.delay) {
             get_command(&snake, &go_game);
             calculate_snake(field, &snake, &go_game);
             draw_game(field);
@@ -44,9 +44,10 @@ void play_game() {
 
 void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake) {
 	FILE *f = fopen("map2.txt", "r");
-    for (int row = 0; row < GAME_ROWS; row++)
+    for (int row = 0; row < GAME_ROWS; row++) {
         for (int col = 0; col < GAME_COLS; col++)
 			fscanf(f, "%d",&matrix[row][col]);
+    }
 	fclose(f);
 
     for (int row = 0; row < GAME_ROWS; row++)
@@ -64,7 +65,7 @@ void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake) {
 	snake->head_y = GAME_ROWS/2-1;
 	snake->head_x = GAME_COLS/2+1;
 	snake->length = 1;
-	snake->speed = START_SPEED;
+	snake->delay = START_DELAY;
 	snake->direction = DIR_LEFT;
 
 	set_food(matrix, 0, *snake);
@@ -91,7 +92,7 @@ void draw_game(int matrix[GAME_ROWS][GAME_COLS]) {
                 get_part_wall( matrix, row, col, s);
                 printf("\033[46;31m%s",s);
 			}
-            else if (matrix[row][col] >= 10) {
+            else if (matrix[row][col] >= GAME_HEAD_SNAKE) {
                 char s[4];
                 get_part_snake( matrix, row, col, s);
                 printf("\033[46;31m%s",s);
@@ -145,7 +146,7 @@ void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
     int minus = grid[row][col]-1;
     int plus = grid[row][col]+1;
     
-    if (grid[row][col] == 10) 
+    if (grid[row][col] == GAME_HEAD_SNAKE) 
         strcpy(s, "█");
     else if ((left == minus && right == plus) || (left == plus && right == minus))
         strcpy(s, "═");
@@ -157,7 +158,7 @@ void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
         strcpy(s, "╚");
     else if ((left == minus && down == plus) || (left == plus && down == minus))
         strcpy(s, "╗");
-    else if ((up == minus && left == plus) || up == (plus && left == minus))
+    else if ((up == minus && left == plus) || (up == plus && left == minus))
         strcpy(s, "╝");
     else if (up == minus)
         strcpy(s, "║");//strcpy(s, "╨");
@@ -247,7 +248,7 @@ void calculate_snake(int frame[GAME_ROWS][GAME_COLS], struct snake *snake, int *
             frame[next_snake_y][next_snake_x] = GAME_HEAD_SNAKE + snake->length;
             (snake->length)++;
 			set_food(frame, MAX_FOOD-1, *snake);
-			snake->speed -= (snake->speed)/20;
+			snake->delay -= (snake->delay)/20;
         } else {
             frame[next_snake_y][next_snake_x] = GAME_SPACE;
         }
@@ -271,7 +272,7 @@ void set_food(int matrix[GAME_ROWS][GAME_COLS], int count, struct snake snake) {
 void set_stone(int matrix[GAME_ROWS][GAME_COLS], struct snake snake) {
 	srand(time(0));
 	int count = 0;
-	while (count < MAX_FOOD) {
+	while (count < MAX_STONE) {
 	    int y = rand()%GAME_ROWS;
 	    int x = rand()%GAME_COLS;
 
@@ -370,12 +371,16 @@ void see_start() {
 	printf("        @timonade   @artanisv   @antwantu   @santiago   @clymeneb               \n");
 	printf("                        21-school_novosibirsk_2022                              \n");
 	printf("                                                                                \n");
-	printf("                                                                                \n");
+	printf("                              \033[2;5mpress any key....                                 \n");
 	press_any_key();
 }
 
-long int get_delta_time(struct timespec time_start, struct timespec time_now) {
-	return (time_now.tv_sec - time_start.tv_sec) * 1e9 + (time_now.tv_nsec - time_start.tv_nsec);
+long int get_delta_time(struct timespec time_start, struct timespec time_now, int direction) {
+    long int delta_time = (time_now.tv_sec - time_start.tv_sec) * 1e9 + (time_now.tv_nsec - time_start.tv_nsec);
+    if (direction == DIR_DOWN || direction == DIR_UP) {
+        delta_time /= 1.5;
+    }
+	return delta_time;
 }
 
 void press_any_key() {

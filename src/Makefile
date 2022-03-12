@@ -10,3 +10,7 @@ clean:
 	rm -f ../build/Snake
 
 rebuild: clean build
+
+zip:
+	rm -f snake.zip
+	zip snake.zip *
