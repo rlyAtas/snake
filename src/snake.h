@@ -2,10 +2,11 @@
 #define FALSE 0
 
 #define KEY_ESC 27
-#define KEY_LEFT 'a'
-#define KEY_UP 'w'
-#define KEY_RIGHT 'd'
-#define KEY_DOWN 's'
+#define KEY_RESTART 'r'
+#define KEY_LEFT 0x445b1b
+#define KEY_UP 0x415b1b
+#define KEY_RIGHT 0x435b1b
+#define KEY_DOWN 0x425b1b
 
 #define DIR_LEFT 1
 #define DIR_UP 2
@@ -20,14 +21,18 @@
 #define GAME_FOOD 3
 #define GAME_HEAD_SNAKE 10
 
-#define MAX_STONE 30
+#define MAX_STONE 20
 #define SHOW_STONE '*'
-#define MAX_FOOD 20
-#define SHOW_FOOD '@'
+#define MAX_FOOD 4
+#define SHOW_FOOD 'o'
 #define DISTANSE_FROM_HEAD 10
 
 #define START_DELAY 200000000
-#define END_SCORE 21
+#define END_SCORE 3
+
+#define MAX_LEVEL 9
+#define FILE_NAME "../maps/map"
+#define FILE_EXT ".txt"
 
 struct snake {
 	int head_y;
@@ -37,7 +42,7 @@ struct snake {
 	int direction;
 };
 
-void init_game(int[GAME_ROWS][GAME_COLS], struct snake*);
+void init_game(int[GAME_ROWS][GAME_COLS], struct snake*, int);
 void set_icanon(struct termios*);
 void draw_game(int[GAME_ROWS][GAME_COLS]);
 void get_part_snake(int [GAME_ROWS][GAME_COLS], int, int, char*);
@@ -49,8 +54,9 @@ void calculate_snake(int[GAME_ROWS][GAME_COLS], struct snake*, int*);
 void play_game();
 void set_food(int[GAME_ROWS][GAME_COLS], int, struct snake);
 void set_stone(int[GAME_ROWS][GAME_COLS], struct snake);
-void see_finish_win(int);
-void see_finish_fail(int);
+void see_finish_win(int, int *);
+void see_finish_fail(int, int *);
 void see_start();
+void next_level();
 long int get_delta_time(struct timespec, struct timespec, int);
 void press_any_key();

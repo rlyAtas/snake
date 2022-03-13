@@ -8,42 +8,58 @@
 #include "snake.h"
 
 int main() {
-
-	play_game();
+    play_game();
     return 1;
 }
 
 void play_game() {
     int field[GAME_ROWS][GAME_COLS];
     int go_game = TRUE;
+    int level = 0;
     struct termios savetty;
     struct timespec time_start, time_now;
-	struct snake snake;
-
-	init_game(field, &snake);
-	set_icanon(&savetty);
-	see_start();
-	clock_gettime(CLOCK_REALTIME, &time_start);
+    struct snake snake;
+    
+    init_game(field, &snake, level);
+    set_icanon(&savetty);
+    see_start();
+    clock_gettime(CLOCK_REALTIME, &time_start);
     while (go_game) {
         clock_gettime(CLOCK_REALTIME, &time_now);
+
         if (get_delta_time(time_start, time_now, snake.direction) > snake.delay) {
             get_command(&snake, &go_game);
             calculate_snake(field, &snake, &go_game);
             draw_game(field);
             time_start = time_now;
         }
-		if (snake.length == END_SCORE)
-			go_game = FALSE;
+
+        if (snake.length == END_SCORE) {
+            level+= 1;
+            if (level > MAX_LEVEL) {
+                go_game = FALSE;
+            } else {
+                snake.length = 1;
+                next_level();
+                init_game(field, &snake, level);
+            }
+        }
     }
-	if (snake.length == END_SCORE)
-		see_finish_win(snake.length);
-	else
-		see_finish_fail(snake.length);
+
+    if (snake.length == END_SCORE)
+            see_finish_win(snake.length, &level);
+    else
+        see_finish_fail(snake.length, &level);
+
     end_game(savetty);
 }
 
-void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake) {
-	FILE *f = fopen("map2.txt", "r");
+void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake, int level) {
+    FILE *f;
+    char file_name[30];
+    sprintf(file_name, "%s%d%s", FILE_NAME, level, FILE_EXT);
+    f = fopen(file_name, "r");
+
     for (int row = 0; row < GAME_ROWS; row++) {
         for (int col = 0; col < GAME_COLS; col++)
 			fscanf(f, "%d",&matrix[row][col]);
@@ -55,9 +71,6 @@ void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake) {
 			if (row == 0 || col == 0 || row == GAME_ROWS-1 || col == GAME_COLS-1)  {
 				matrix[row][col] = GAME_WALL;	
 			} 
-			// else {
-			// 	matrix[row][col] = GAME_SPACE;
-			// }	
 		}
     
     matrix[GAME_ROWS/2-1][GAME_COLS/2+1] = GAME_HEAD_SNAKE;
@@ -70,17 +83,19 @@ void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake) {
 
 	set_food(matrix, 0, *snake);
 	set_stone(matrix, *snake);
-
 }
 
 void set_icanon(struct termios *savetty) {
     struct termios tty;
     tcgetattr(0, &tty);
+    
+    if (tty.c_lflag != ICANON) {
     *savetty = tty;
     tty.c_lflag &= ~(ICANON|ECHO);
     tty.c_cc[VMIN] = 0;
     tty.c_cc[VTIME] = 0;
     tcsetattr(0, TCSAFLUSH, &tty);
+    }
 }
 
 void draw_game(int matrix[GAME_ROWS][GAME_COLS]) {
@@ -90,18 +105,18 @@ void draw_game(int matrix[GAME_ROWS][GAME_COLS]) {
             if (matrix[row][col] == GAME_WALL) {
                 char s[4];
                 get_part_wall( matrix, row, col, s);
-                printf("\033[46;31m%s",s);
+                printf("\033[1;32m%s",s);
 			}
             else if (matrix[row][col] >= GAME_HEAD_SNAKE) {
                 char s[4];
                 get_part_snake( matrix, row, col, s);
-                printf("\033[46;31m%s",s);
+                printf("\033[37;1m%s",s);
             } else if (matrix[row][col] == GAME_FOOD) {
-                printf("\033[46;30m%c", SHOW_FOOD);
+                printf("\033[37;1m%c", SHOW_FOOD);
             } else if (matrix[row][col] == GAME_STONE) {
-                printf("\033[46;30m%c", SHOW_STONE);
+                printf("\033[1;32m▙");
             } else {
-                printf("\033[46m ");
+                printf(" ");
             }
         }
         printf("\n");
@@ -130,11 +145,11 @@ void get_part_wall(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
         strcpy(s, "┐");
     else if (up == GAME_WALL && left == GAME_WALL) 
         strcpy(s, "┘");
-	else if ((left == GAME_WALL && right == GAME_SPACE) || 
-			 (left == GAME_SPACE && right == GAME_WALL))
+	else if ((left == GAME_WALL && right != GAME_WALL) || 
+			 (left != GAME_WALL && right == GAME_WALL))
 		strcpy(s, "─");
-	else if ((up == GAME_WALL && down == GAME_SPACE) ||
-			 (up == GAME_SPACE && down == GAME_WALL))
+	else if ((up == GAME_WALL && down != GAME_WALL) ||
+			 (up == !GAME_WALL && down == GAME_WALL))
 		strcpy(s, "│");
 }
 
@@ -147,7 +162,7 @@ void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
     int plus = grid[row][col]+1;
     
     if (grid[row][col] == GAME_HEAD_SNAKE) 
-        strcpy(s, "█");
+        strcpy(s, "■");
     else if ((left == minus && right == plus) || (left == plus && right == minus))
         strcpy(s, "═");
     else if ((up == minus && down == plus) || (up == plus && down == minus))
@@ -161,19 +176,19 @@ void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
     else if ((up == minus && left == plus) || (up == plus && left == minus))
         strcpy(s, "╝");
     else if (up == minus)
-        strcpy(s, "║");//strcpy(s, "╨");
+        strcpy(s, "║");
     else if (down == minus)
-        strcpy(s, "║");//strcpy(s, "╥");
+        strcpy(s, "║");
     else if (left == minus)
-        strcpy(s, "═");//strcpy(s, "╡");
+        strcpy(s, "═");
     else if (right == minus)
-        strcpy(s, "═");//strcpy(s, "╞");
+        strcpy(s, "═");
 }
 
 void get_command(struct snake *snake, int *isGame) {
-    char control;
+    int control;
 
-    if (read(0, &control, 1)) {
+    if (read(0, &control, 3)) {
         if (control == KEY_LEFT)
             snake->direction = is_direction(snake->direction, DIR_LEFT) ? DIR_LEFT : snake->direction;
         else if (control == KEY_UP)
@@ -185,8 +200,6 @@ void get_command(struct snake *snake, int *isGame) {
         else if (control == KEY_ESC)
             *isGame = FALSE;
     }
-	// printf("snake->direction = %d\n", snake->direction);
-	// press_any_key();
 }
 
 int is_direction(int direction, int new_direction) {
@@ -284,15 +297,15 @@ void set_stone(int matrix[GAME_ROWS][GAME_COLS], struct snake snake) {
 	}
 }
 
-void see_finish_win(int score) {
+void see_finish_win(int score, int *level) {
 	printf("\033c");
-	printf("             ╖╓                                                                 \n");
-	printf("      ╔══════╨╨══════╗                                                          \n");
-	printf("      ║     o  o     ║                             ╔═════════════╗              \n");
-	printf("      ║   ╳      ╳   ║                             ║    ░░░   ╔══╝              \n");
-	printf("      ║              ║                             ║ ░░    ╔══╝                 \n");
-	printf("      ║ ╎╎╎     ╎╎╎  ║                             ║    ▒  ║                    \n");
-	printf("      ╚═══╗      ╔═══╝                             ║ ▒▒    ║                    \n");
+	printf("\033[32m             ╖╓                                                           \n");
+	printf("      ╔══════╨╨══════╗                                                    \n");
+	printf("      ║     o  o     ║                             ╔═════════════╗        \n");
+	printf("      ║   V      V   ║                             ║    ░░░   ╔══╝        \n");
+	printf("      ║              ║                             ║ ░░    ╔══╝           \n");
+	printf("      ║ ╎╎╎     ╎╎╎  ║                             ║    ▒  ║              \n");
+	printf("      ╚═══╗      ╔═══╝                             ║ ▒▒    ║              \n");
 	printf("          ║░     ║                                 ║       ║\n");
 	printf("          ║     ░║        ╔════════════════╗       ║    ▒▒▒║\n");
 	printf("          ║      ║        ║    ░░░         ║       ║ ▒▒▒   ║\n");
@@ -300,79 +313,116 @@ void see_finish_win(int score) {
 	printf("          ║ ░░░       ░░░░      ░░          ░░░     ▒▒     ║\n");
 	printf("          ║                   ░░░░░      ░░░        ▒▒▒▒   ║\n");
 	printf("          ╚════════════════════════════════════════════════╝\n");
-	printf("\n");                                                                         
-	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
-	printf("   _______  _______  _______  _______    _______           _______  _______     \n");
-	printf("  (  ____ )(  ___  )(       )(  ____ )  (  ___  )|)     /|(  ____ )(  ____ )    \n");
-	printf("  | (    )/| (   ) || () () || (    )/  | (   ) || )   ( || (    )/| (    )|    \n");
-	printf("  | |      | (___) || || || || (__      | |   | || |   | || (__    | (____)|    \n");
-	printf("  | | ____ |  ___  || |(_)| ||  __)     | |   | |( (   ) )|  __)   |     __)    \n");
-	printf("  | | )_  )| (   ) || |   | || (        | |   | | ) )_/ / | (      | () (       \n");
-	printf("  | (___) || )   ( || )   ( || (____/)  | (___) |  )   /  | (____/)| ) ) )__    \n");
-	printf("  (_______)|/     )||/     )|(_______/  (_______)   )_/   (_______/|/   )__/    \n");
-	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
-	printf("                                YOUR SCORE: %02d                               \n", score);
+    printf("                             \033[2;5mPress R to restart\033[0m\n");
+    printf("\033[32m  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
+    printf("                     ╔═══╦═══╦═╗╔═╦═══╗  ╔═══╦╗  ╔╦═══╦═══╗\n");
+    printf("                     ║╔═╗║╔═╗║║╚╝║║╔══╝  ║╔═╗║╚╗╔╝║╔══╣╔═╗║\n");
+    printf("                     ║║ ╚╣║ ║║╔╗╔╗║╚══╗  ║║ ║╠╗║║╔╣╚══╣╚═╝║\n");
+    printf("                     ║║╔═╣╚═╝║║║║║║╔══╝  ║║ ║║║╚╝║║╔══╣╔╗╔╝\n");
+    printf("                     ║╚╩═║╔═╗║║║║║║╚══╗  ║╚═╝║╚╗╔╝║╚══╣║║╚╗\n");
+    printf("                     ╚═══╩╝ ╚╩╝╚╝╚╩═══╝  ╚═══╝ ╚╝ ╚═══╩╝╚═╝\n");
+    printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
+    printf("                                 YOUR SCORE: %02d                               \n", score + *level * END_SCORE);
+    int control =0;
+    while (control == 0){
+    if (read(0, &control, 3)) {
+        if (control == KEY_RESTART)
+            play_game();
+        else if (control == KEY_ESC)
+            control = KEY_ESC;
+        else control = 0;
+    }
+    }
 }
 
-void see_finish_fail(int score) {
+void see_finish_fail(int score, int *level) {
 	printf("\033c");
-	printf("             ╖╓                                                                 \n");
-	printf("      ╔══════╨╨══════╗                                                          \n");
-	printf("      ║     o  o     ║                                                          \n");
-	printf("      ║   ╳      ╳   ║                                                          \n");
-	printf("      ║              ║                  ╔═══════╗                               \n");
-	printf("      ║ ╎╎╎     ╎╎╎  ║                  ║░ ╔════╝                               \n");
-	printf("      ╚═════╗   ╔════╝                  ║  ║                                    \n");
-	printf("            ║░  ║            ╔══════════╝  ║                                    \n");
-	printf("            ║  ░║            ║░  ╔═════════╝                                     \n");
-	printf("            ║   ║            ║   ║                                   \n");
-	printf("            ║░░░║            ║░░ ║                                             \n");
-	printf("            ║ ░░╚══(((((((═══╝   ║                                             \n");
-	printf("            ╚══════(((((((═══════╝                                             \n");
-	printf("\n");
-	printf("\n");
-	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
-	printf("   _______  _______  _______  _______    _______           _______  _______     \n");
-	printf("  (  ____ )(  ___  )(       )(  ____ )  (  ___  )|)     /|(  ____ )(  ____ )    \n");
-	printf("  | (    )/| (   ) || () () || (    )/  | (   ) || )   ( || (    )/| (    )|    \n");
-	printf("  | |      | (___) || || || || (__      | |   | || |   | || (__    | (____)|    \n");
-	printf("  | | ____ |  ___  || |(_)| ||  __)     | |   | |( (   ) )|  __)   |     __)    \n");
-	printf("  | | )_  )| (   ) || |   | || (        | |   | | ) )_/ / | (      | () (       \n");
-	printf("  | (___) || )   ( || )   ( || (____/)  | (___) |  )   /  | (____/)| ) ) )__    \n");
-	printf("  (_______)|/     )||/     )|(_______/  (_______)   )_/   (_______/|/   )__/    \n");
-	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
-	printf("                                YOUR SCORE: %02d                               \n", score);
+    printf("\n");
+	printf("\033[32m             ╖╓                                                 \n");
+	printf("      ╔══════╨╨══════╗                                          \n");
+	printf("      ║     o  o     ║                                          \n");
+	printf("      ║   ╳      ╳   ║                                          \n");
+	printf("      ║              ║                  ╔═══════╗               \n");
+	printf("      ║ ╎╎╎     ╎╎╎  ║                  ║░ ╔════╝               \n");
+    printf("      ╚═════╗   ╔════╝                  ║  ║                    \n");
+	printf("            ║░  ║            ╔══════════╝  ║                    \n");
+	printf("            ║  ░║            ║░  ╔═════════╝                    \n");
+	printf("            ║   ║            ║   ║                              \n");
+	printf("            ║░░░║  ╔╔╔╔╔╔╔   ║░░ ║                              \n");
+	printf("            ║ ░░╚══║╝╝╝╝╝╚═══╝   ║                              \n");
+	printf("            ╚══════║╗╗╗╗╗╔═══════╝                              \n");
+	printf("                   ╚╚╚╚╚╚╚\n");
+	printf("                               \033[2;5mPress R to restart\033[0m\n");
+	printf("\033[32m  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
+    printf("                     ╔═══╦═══╦═╗╔═╦═══╗  ╔═══╦╗  ╔╦═══╦═══╗\n");
+    printf("                     ║╔═╗║╔═╗║║╚╝║║╔══╝  ║╔═╗║╚╗╔╝║╔══╣╔═╗║\n");
+    printf("                     ║║ ╚╣║ ║║╔╗╔╗║╚══╗  ║║ ║╠╗║║╔╣╚══╣╚═╝║\n");
+    printf("                     ║║╔═╣╚═╝║║║║║║╔══╝  ║║ ║║║╚╝║║╔══╣╔╗╔╝\n");
+    printf("                     ║╚╩═║╔═╗║║║║║║╚══╗  ║╚═╝║╚╗╔╝║╚══╣║║╚╗\n");
+    printf("                     ╚═══╩╝ ╚╩╝╚╝╚╩═══╝  ╚═══╝ ╚╝ ╚═══╩╝╚═╝\n");
+	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
+	printf("                                 YOUR SCORE: %02d                       \n", score + *level * END_SCORE);
+    int control = 0;
+    while(control == 0) {
+    if (read(0, &control, 3)) {
+        if (control == KEY_RESTART)
+            play_game();
+        else if (control == KEY_ESC)
+            control = KEY_ESC;
+        else control = 0;
+    }
+    }
 }
 
 void see_start() {
 	printf("\033c");
 	printf("                                                                                \n");
 	printf("                                                                                \n");
-	printf("                         YOU ARE IN THE SUPER GAME                              \n");
+	printf("                         \033[32mYOU ARE IN THE SUPER GAME                              \n");
 	printf("                                                                                \n");
 	printf("                                                                                \n");
-	printf("                  ╔═══╗   ╔═╗─╔╗   ╔═══╗   ╔╗╔═╗   ╔═══╗                        \n");
+	printf("                  ╔═══╗   ╔═╗ ╔╗   ╔═══╗   ╔╗╔═╗   ╔═══╗                        \n");
 	printf("                  ║╔═╗║   ║║╚╗║║   ║╔═╗║   ║║║╔╝   ║╔══╝                        \n");
-	printf("                  ║╚══╗   ║╔╗╚╝║   ║║─║║   ║╚╝╝─   ║╚══╗                        \n");
-	printf("                  ╚══╗║   ║║╚╗║║   ║╚═╝║   ║╔╗║─   ║╔══╝                        \n");
-	printf("                  ║╚═╝║   ║║─║║║   ║╔═╗║   ║║║╚╗   ║╚══╗                        \n");
-	printf("                  ╚═══╝   ╚╝─╚═╝   ╚╝─╚╝   ╚╝╚═╝   ╚═══╝                        \n");
+	printf("                  ║╚══╗   ║╔╗╚╝║   ║║ ║║   ║╚╝╝    ║╚══╗                        \n");
+	printf("                  ╚══╗║   ║║╚╗║║   ║╚═╝║   ║╔╗║    ║╔══╝                        \n");
+	printf("                  ║╚═╝║   ║║ ║║║   ║╔═╗║   ║║║╚╗   ║╚══╗                        \n");
+	printf("                  ╚═══╝   ╚╝ ╚═╝   ╚╝ ╚╝   ╚╝╚═╝   ╚═══╝                        \n");
 	printf("                                                                                \n");
-	printf("                             ╔══════════════╗                                   \n");
-	printf("                             ║ ╎╎╎     ╎╎╎  ║                                   \n");
-	printf("                             ║              ║                                   \n");
+	printf("   Controls:                 ╔══════════════╗                                   \n");
+	printf("   ← ↑ → ↓  - to move        ║ ╎╎╎     ╎╎╎  ║                                   \n");
+	printf("        esc - to exit        ║              ║                                   \n");
 	printf("                             ║   ╳      ╳   ║                                   \n");
 	printf("                             ║     o  o     ║                                   \n");
 	printf("                             ╚══════╥╥══════╝                                   \n");
 	printf("                                    ╜╙                                          \n");
 	printf("                               LET'S PLAY? ;)                                   \n");
 	printf("                                                                                \n");
-	printf("              FROM CREATORS PLAY GAME PONG ANG GAME OF LIFE                     \n");
+	printf("              FROM THE CREATORS OF \"PONG\" ANG \"GAME OF LIFE\"                \n");
 	printf("        @timonade   @artanisv   @antwantu   @santiago   @clymeneb               \n");
 	printf("                        21-school_novosibirsk_2022                              \n");
 	printf("                                                                                \n");
 	printf("                              \033[2;5mpress any key....                                 \n");
 	press_any_key();
+}
+
+void next_level() {
+    printf("\033c");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                                                                           \n");
+    printf("                              \033[1;5;32m\n");
+    printf("                  ╔═╗ ╔╦═══╦═╗╔═╦════╗ ╔╗  ╔═══╦╗  ╔╦═══╦╗                 \n");
+    printf("                  ║║╚╗║║╔══╩╗╚╝╔╣╔╗╔╗║ ║║  ║╔══╣╚╗╔╝║╔══╣║                 \n");
+    printf("                  ║╔╗╚╝║╚══╗╚╗╔╝╚╝║║╚╝ ║║  ║╚══╬╗║║╔╣╚══╣║                 \n");
+    printf("                  ║║╚╗║║╔══╝╔╝╚╗  ║║   ║║ ╔╣╔══╝║╚╝║║╔══╣║ ╔╗              \n");
+    printf("                  ║║ ║║║╚══╦╝╔╗╚╗ ║║   ║╚═╝║╚══╗╚╗╔╝║╚══╣╚═╝╠╦╦╗           \n");
+    printf("                  ╚╝ ╚═╩═══╩═╝╚═╝ ╚╝   ╚═══╩═══╝ ╚╝ ╚═══╩═══╩╩╩╝           \n");
+    printf("                                \033[1;5;32mpress any key....                 \n");
+    press_any_key();
 }
 
 long int get_delta_time(struct timespec time_start, struct timespec time_now, int direction) {
