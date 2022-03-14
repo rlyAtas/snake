@@ -19,7 +19,7 @@ void play_game() {
     struct termios savetty;
     struct timespec time_start, time_now;
     struct snake snake;
-    
+
     init_game(field, &snake, level);
     set_icanon(&savetty);
     see_start();
@@ -62,33 +62,33 @@ void init_game(int matrix[GAME_ROWS][GAME_COLS], struct snake *snake, int level)
 
     for (int row = 0; row < GAME_ROWS; row++) {
         for (int col = 0; col < GAME_COLS; col++)
-			fscanf(f, "%d",&matrix[row][col]);
+            fscanf(f, "%d", &matrix[row][col]);
     }
-	fclose(f);
+    fclose(f);
 
     for (int row = 0; row < GAME_ROWS; row++)
         for (int col = 0; col < GAME_COLS; col++) {
-			if (row == 0 || col == 0 || row == GAME_ROWS-1 || col == GAME_COLS-1)  {
-				matrix[row][col] = GAME_WALL;	
-			} 
-		}
-    
+            if (row == 0 || col == 0 || row == GAME_ROWS-1 || col == GAME_COLS-1)  {
+                matrix[row][col] = GAME_WALL;
+            }
+        }
+
     matrix[GAME_ROWS/2-1][GAME_COLS/2+1] = GAME_HEAD_SNAKE;
 
-	snake->head_y = GAME_ROWS/2-1;
-	snake->head_x = GAME_COLS/2+1;
-	snake->length = 1;
-	snake->delay = START_DELAY;
-	snake->direction = DIR_LEFT;
+    snake->head_y = GAME_ROWS/2-1;
+    snake->head_x = GAME_COLS/2+1;
+    snake->length = 1;
+    snake->delay = START_DELAY;
+    snake->direction = DIR_LEFT;
 
-	set_food(matrix, 0, *snake);
-	set_stone(matrix, *snake);
+    set_food(matrix, 0, *snake);
+    set_stone(matrix, *snake);
 }
 
 void set_icanon(struct termios *savetty) {
     struct termios tty;
     tcgetattr(0, &tty);
-    
+
     if (tty.c_lflag != ICANON) {
     *savetty = tty;
     tty.c_lflag &= ~(ICANON|ECHO);
@@ -104,13 +104,12 @@ void draw_game(int matrix[GAME_ROWS][GAME_COLS]) {
         for (int col = 0; col < GAME_COLS; col++) {
             if (matrix[row][col] == GAME_WALL) {
                 char s[4];
-                get_part_wall( matrix, row, col, s);
-                printf("\033[1;32m%s",s);
-			}
-            else if (matrix[row][col] >= GAME_HEAD_SNAKE) {
+                get_part_wall(matrix, row, col, s);
+                printf("\033[1;32m%s", s);
+            } else if (matrix[row][col] >= GAME_HEAD_SNAKE) {
                 char s[4];
-                get_part_snake( matrix, row, col, s);
-                printf("\033[37;1m%s",s);
+                get_part_snake(matrix, row, col, s);
+                printf("\033[37;1m%s", s);
             } else if (matrix[row][col] == GAME_FOOD) {
                 printf("\033[37;1m%c", SHOW_FOOD);
             } else if (matrix[row][col] == GAME_STONE) {
@@ -125,6 +124,7 @@ void draw_game(int matrix[GAME_ROWS][GAME_COLS]) {
 
 void end_game(struct termios savetty) {
     tcsetattr(0, TCSANOW, &savetty);
+    printf("\033[0m");
 }
 
 void get_part_wall(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
@@ -132,25 +132,25 @@ void get_part_wall(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
     int right = col+1 < GAME_COLS ? grid[row][col+1] : GAME_SPACE;
     int up = row-1 >= 0 ? grid[row-1][col] : GAME_SPACE;
     int down = row+1 < GAME_ROWS ? grid[row+1][col] : GAME_SPACE;
-	
+
     if (left == GAME_WALL && right == GAME_WALL)
         strcpy(s, "─");
-    else if (up == GAME_WALL && down == GAME_WALL) 
+    else if (up == GAME_WALL && down == GAME_WALL)
         strcpy(s, "│");
-    else if (right == GAME_WALL && down == GAME_WALL) 
-        strcpy(s, "┌");    
-    else if (up == GAME_WALL && right == GAME_WALL) 
+    else if (right == GAME_WALL && down == GAME_WALL)
+        strcpy(s, "┌");
+    else if (up == GAME_WALL && right == GAME_WALL)
         strcpy(s, "└");
-    else if (left == GAME_WALL && down == GAME_WALL) 
+    else if (left == GAME_WALL && down == GAME_WALL)
         strcpy(s, "┐");
-    else if (up == GAME_WALL && left == GAME_WALL) 
+    else if (up == GAME_WALL && left == GAME_WALL)
         strcpy(s, "┘");
-	else if ((left == GAME_WALL && right != GAME_WALL) || 
-			 (left != GAME_WALL && right == GAME_WALL))
-		strcpy(s, "─");
-	else if ((up == GAME_WALL && down != GAME_WALL) ||
-			 (up == !GAME_WALL && down == GAME_WALL))
-		strcpy(s, "│");
+    else if ((left == GAME_WALL && right != GAME_WALL) ||
+             (left != GAME_WALL && right == GAME_WALL))
+        strcpy(s, "─");
+    else if ((up == GAME_WALL && down != GAME_WALL) ||
+             (up == !GAME_WALL && down == GAME_WALL))
+        strcpy(s, "│");
 }
 
 void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
@@ -160,15 +160,15 @@ void get_part_snake(int grid[GAME_ROWS][GAME_COLS], int row, int col, char *s) {
     int down = grid[row+1][col];
     int minus = grid[row][col]-1;
     int plus = grid[row][col]+1;
-    
-    if (grid[row][col] == GAME_HEAD_SNAKE) 
+
+    if (grid[row][col] == GAME_HEAD_SNAKE)
         strcpy(s, "■");
     else if ((left == minus && right == plus) || (left == plus && right == minus))
         strcpy(s, "═");
     else if ((up == minus && down == plus) || (up == plus && down == minus))
         strcpy(s, "║");
     else if ((right == minus && down == plus) || (right == plus && down == minus))
-        strcpy(s, "╔");    
+        strcpy(s, "╔");
     else if ((up == minus && right == plus) || (up == plus && right == minus))
         strcpy(s, "╚");
     else if ((left == minus && down == plus) || (left == plus && down == minus))
@@ -229,12 +229,12 @@ void calculate_snake(int frame[GAME_ROWS][GAME_COLS], struct snake *snake, int *
     if (snake->direction == DIR_DOWN)
         snake->head_y = snake->head_y+1;
 
-    if (frame[snake->head_y][snake->head_x] == GAME_WALL || 
-        frame[snake->head_y][snake->head_x] == GAME_STONE || 
+    if (frame[snake->head_y][snake->head_x] == GAME_WALL ||
+        frame[snake->head_y][snake->head_x] == GAME_STONE ||
         frame[snake->head_y][snake->head_x] >= GAME_HEAD_SNAKE ) {
             *is_game = FALSE;
-			frame[snake->head_y][snake->head_x] = GAME_SPACE;
-        }    
+            frame[snake->head_y][snake->head_x] = GAME_SPACE;
+        }
 
     if (frame[snake->head_y][snake->head_x] == GAME_FOOD) {
         is_snake_eat = TRUE;
@@ -247,21 +247,21 @@ void calculate_snake(int frame[GAME_ROWS][GAME_COLS], struct snake *snake, int *
         for (int i = 1; i < snake->length; i++) {
             frame[next_snake_y][next_snake_x] = GAME_HEAD_SNAKE+i;
 
-            if ( frame[next_snake_y-1][next_snake_x] == frame[next_snake_y][next_snake_x] ) 
+            if ( frame[next_snake_y-1][next_snake_x] == frame[next_snake_y][next_snake_x] )
                 next_snake_y = next_snake_y-1;
-            else if ( frame[next_snake_y+1][next_snake_x] == frame[next_snake_y][next_snake_x] ) 
+            else if ( frame[next_snake_y+1][next_snake_x] == frame[next_snake_y][next_snake_x] )
                 next_snake_y = next_snake_y+1;
-            else if ( frame[next_snake_y][next_snake_x-1] == frame[next_snake_y][next_snake_x] ) 
+            else if ( frame[next_snake_y][next_snake_x-1] == frame[next_snake_y][next_snake_x] )
                 next_snake_x = next_snake_x-1;
-            else if ( frame[next_snake_y][next_snake_x+1] == frame[next_snake_y][next_snake_x] ) 
+            else if ( frame[next_snake_y][next_snake_x+1] == frame[next_snake_y][next_snake_x] )
                 next_snake_x = next_snake_x+1;
         }
 
         if (is_snake_eat) {
             frame[next_snake_y][next_snake_x] = GAME_HEAD_SNAKE + snake->length;
             (snake->length)++;
-			set_food(frame, MAX_FOOD-1, *snake);
-			snake->delay -= (snake->delay)/20;
+            set_food(frame, MAX_FOOD-1, *snake);
+            snake->delay -= (snake->delay)/20;
         } else {
             frame[next_snake_y][next_snake_x] = GAME_SPACE;
         }
@@ -269,50 +269,50 @@ void calculate_snake(int frame[GAME_ROWS][GAME_COLS], struct snake *snake, int *
 }
 
 void set_food(int matrix[GAME_ROWS][GAME_COLS], int count, struct snake snake) {
-	srand(time(0));
-	while (count < MAX_FOOD) {
-	    int y = rand()%GAME_ROWS;
-	    int x = rand()%GAME_COLS;
+    srand(time(0));
+    while (count < MAX_FOOD) {
+        int y = rand()%GAME_ROWS;
+        int x = rand()%GAME_COLS;
 
-		if (matrix[y][x] == GAME_SPACE && 
-			sqrt(pow(snake.head_y-y, 2) + pow(snake.head_x-x, 2)) > DISTANSE_FROM_HEAD) {
-			matrix[y][x] = GAME_FOOD;
-			count++;
-		}
-	}
+        if (matrix[y][x] == GAME_SPACE &&
+            sqrt(pow(snake.head_y-y, 2) + pow(snake.head_x-x, 2)) > DISTANSE_FROM_HEAD) {
+            matrix[y][x] = GAME_FOOD;
+            count++;
+        }
+    }
 }
 
 void set_stone(int matrix[GAME_ROWS][GAME_COLS], struct snake snake) {
-	srand(time(0));
-	int count = 0;
-	while (count < MAX_STONE) {
-	    int y = rand()%GAME_ROWS;
-	    int x = rand()%GAME_COLS;
+    srand(time(0));
+    int count = 0;
+    while (count < MAX_STONE) {
+        int y = rand()%GAME_ROWS;
+        int x = rand()%GAME_COLS;
 
-		if (matrix[y][x] == GAME_SPACE && 
-			sqrt(pow(snake.head_y-y, 2) + pow(snake.head_x-x, 2)) > DISTANSE_FROM_HEAD) {
-			matrix[y][x] = GAME_STONE;
-			count++;
-		}
-	}
+        if (matrix[y][x] == GAME_SPACE &&
+            sqrt(pow(snake.head_y-y, 2) + pow(snake.head_x-x, 2)) > DISTANSE_FROM_HEAD) {
+            matrix[y][x] = GAME_STONE;
+            count++;
+        }
+    }
 }
 
-void see_finish_win(int score, int *level) {
-	printf("\033c");
-	printf("\033[32m             ╖╓                                                           \n");
-	printf("      ╔══════╨╨══════╗                                                    \n");
-	printf("      ║     o  o     ║                             ╔═════════════╗        \n");
-	printf("      ║   V      V   ║                             ║    ░░░   ╔══╝        \n");
-	printf("      ║              ║                             ║ ░░    ╔══╝           \n");
-	printf("      ║ ╎╎╎     ╎╎╎  ║                             ║    ▒  ║              \n");
-	printf("      ╚═══╗      ╔═══╝                             ║ ▒▒    ║              \n");
-	printf("          ║░     ║                                 ║       ║\n");
-	printf("          ║     ░║        ╔════════════════╗       ║    ▒▒▒║\n");
-	printf("          ║      ║        ║    ░░░         ║       ║ ▒▒▒   ║\n");
-	printf("          ║░░░   ╚════════╝           ░░░  ╚═══════╝       ║\n");
-	printf("          ║ ░░░       ░░░░      ░░          ░░░     ▒▒     ║\n");
-	printf("          ║                   ░░░░░      ░░░        ▒▒▒▒   ║\n");
-	printf("          ╚════════════════════════════════════════════════╝\n");
+void see_finish_win(int score, const int *level) {
+    printf("\033c");
+    printf("\033[32m             ╖╓                                                           \n");
+    printf("      ╔══════╨╨══════╗                                                    \n");
+    printf("      ║     o  o     ║                             ╔═════════════╗        \n");
+    printf("      ║   V      V   ║                             ║    ░░░   ╔══╝        \n");
+    printf("      ║              ║                             ║ ░░    ╔══╝           \n");
+    printf("      ║ ╎╎╎     ╎╎╎  ║                             ║    ▒  ║              \n");
+    printf("      ╚═══╗      ╔═══╝                             ║ ▒▒    ║              \n");
+    printf("          ║░     ║                                 ║       ║\n");
+    printf("          ║     ░║        ╔════════════════╗       ║    ▒▒▒║\n");
+    printf("          ║      ║        ║    ░░░         ║       ║ ▒▒▒   ║\n");
+    printf("          ║░░░   ╚════════╝           ░░░  ╚═══════╝       ║\n");
+    printf("          ║ ░░░       ░░░░      ░░          ░░░     ▒▒     ║\n");
+    printf("          ║                   ░░░░░      ░░░        ▒▒▒▒   ║\n");
+    printf("          ╚════════════════════════════════════════════════╝\n");
     printf("                             \033[2;5mPress R to restart\033[0m\n");
     printf("\033[32m  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
     printf("                     ╔═══╦═══╦═╗╔═╦═══╗  ╔═══╦╗  ╔╦═══╦═══╗\n");
@@ -322,87 +322,91 @@ void see_finish_win(int score, int *level) {
     printf("                     ║╚╩═║╔═╗║║║║║║╚══╗  ║╚═╝║╚╗╔╝║╚══╣║║╚╗\n");
     printf("                     ╚═══╩╝ ╚╩╝╚╝╚╩═══╝  ╚═══╝ ╚╝ ╚═══╩╝╚═╝\n");
     printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  \n");
-    printf("                                 YOUR SCORE: %02d                               \n", score + *level * END_SCORE);
-    int control =0;
-    while (control == 0){
-    if (read(0, &control, 3)) {
-        if (control == KEY_RESTART)
-            play_game();
-        else if (control == KEY_ESC)
-            control = KEY_ESC;
-        else control = 0;
-    }
+    printf("                                 YOUR SCORE: %02d                               \n",
+            score + *level * END_SCORE);
+    int control = 0;
+    while (control == 0) {
+        if (read(0, &control, 3)) {
+            if (control == KEY_RESTART)
+                play_game();
+            else if (control == KEY_ESC)
+                control = KEY_ESC;
+            else
+                control = 0;
+        }
     }
 }
 
-void see_finish_fail(int score, int *level) {
-	printf("\033c");
+void see_finish_fail(int score, const int *level) {
+    printf("\033c");
     printf("\n");
-	printf("\033[32m             ╖╓                                                 \n");
-	printf("      ╔══════╨╨══════╗                                          \n");
-	printf("      ║     o  o     ║                                          \n");
-	printf("      ║   ╳      ╳   ║                                          \n");
-	printf("      ║              ║                  ╔═══════╗               \n");
-	printf("      ║ ╎╎╎     ╎╎╎  ║                  ║░ ╔════╝               \n");
+    printf("\033[32m             ╖╓                                                 \n");
+    printf("      ╔══════╨╨══════╗                                          \n");
+    printf("      ║     o  o     ║                                          \n");
+    printf("      ║   ╳      ╳   ║                                          \n");
+    printf("      ║              ║                  ╔═══════╗               \n");
+    printf("      ║ ╎╎╎     ╎╎╎  ║                  ║░ ╔════╝               \n");
     printf("      ╚═════╗   ╔════╝                  ║  ║                    \n");
-	printf("            ║░  ║            ╔══════════╝  ║                    \n");
-	printf("            ║  ░║            ║░  ╔═════════╝                    \n");
-	printf("            ║   ║            ║   ║                              \n");
-	printf("            ║░░░║  ╔╔╔╔╔╔╔   ║░░ ║                              \n");
-	printf("            ║ ░░╚══║╝╝╝╝╝╚═══╝   ║                              \n");
-	printf("            ╚══════║╗╗╗╗╗╔═══════╝                              \n");
-	printf("                   ╚╚╚╚╚╚╚\n");
-	printf("                               \033[2;5mPress R to restart\033[0m\n");
-	printf("\033[32m  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
+    printf("            ║░  ║            ╔══════════╝  ║                    \n");
+    printf("            ║  ░║            ║░  ╔═════════╝                    \n");
+    printf("            ║   ║            ║   ║                              \n");
+    printf("            ║░░░║  ╔╔╔╔╔╔╔   ║░░ ║                              \n");
+    printf("            ║ ░░╚══║╝╝╝╝╝╚═══╝   ║                              \n");
+    printf("            ╚══════║╗╗╗╗╗╔═══════╝                              \n");
+    printf("                   ╚╚╚╚╚╚╚\n");
+    printf("                               \033[2;5mPress R to restart\033[0m\n");
+    printf("\033[32m  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
     printf("                     ╔═══╦═══╦═╗╔═╦═══╗  ╔═══╦╗  ╔╦═══╦═══╗\n");
     printf("                     ║╔═╗║╔═╗║║╚╝║║╔══╝  ║╔═╗║╚╗╔╝║╔══╣╔═╗║\n");
     printf("                     ║║ ╚╣║ ║║╔╗╔╗║╚══╗  ║║ ║╠╗║║╔╣╚══╣╚═╝║\n");
     printf("                     ║║╔═╣╚═╝║║║║║║╔══╝  ║║ ║║║╚╝║║╔══╣╔╗╔╝\n");
     printf("                     ║╚╩═║╔═╗║║║║║║╚══╗  ║╚═╝║╚╗╔╝║╚══╣║║╚╗\n");
     printf("                     ╚═══╩╝ ╚╩╝╚╝╚╩═══╝  ╚═══╝ ╚╝ ╚═══╩╝╚═╝\n");
-	printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
-	printf("                                 YOUR SCORE: %02d                       \n", score + *level * END_SCORE);
+    printf("  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ \n");
+    printf("                                 YOUR SCORE: %02d                       \n",
+            score + *level * END_SCORE);
     int control = 0;
-    while(control == 0) {
-    if (read(0, &control, 3)) {
-        if (control == KEY_RESTART)
-            play_game();
-        else if (control == KEY_ESC)
-            control = KEY_ESC;
-        else control = 0;
-    }
+    while (control == 0) {
+        if (read(0, &control, 3)) {
+            if (control == KEY_RESTART)
+                play_game();
+            else if (control == KEY_ESC)
+                control = KEY_ESC;
+            else
+                control = 0;
+        }
     }
 }
 
 void see_start() {
-	printf("\033c");
-	printf("                                                                                \n");
-	printf("                                                                                \n");
-	printf("                         \033[32mYOU ARE IN THE SUPER GAME                              \n");
-	printf("                                                                                \n");
-	printf("                                                                                \n");
-	printf("                  ╔═══╗   ╔═╗ ╔╗   ╔═══╗   ╔╗╔═╗   ╔═══╗                        \n");
-	printf("                  ║╔═╗║   ║║╚╗║║   ║╔═╗║   ║║║╔╝   ║╔══╝                        \n");
-	printf("                  ║╚══╗   ║╔╗╚╝║   ║║ ║║   ║╚╝╝    ║╚══╗                        \n");
-	printf("                  ╚══╗║   ║║╚╗║║   ║╚═╝║   ║╔╗║    ║╔══╝                        \n");
-	printf("                  ║╚═╝║   ║║ ║║║   ║╔═╗║   ║║║╚╗   ║╚══╗                        \n");
-	printf("                  ╚═══╝   ╚╝ ╚═╝   ╚╝ ╚╝   ╚╝╚═╝   ╚═══╝                        \n");
-	printf("                                                                                \n");
-	printf("   Controls:                 ╔══════════════╗                                   \n");
-	printf("   ← ↑ → ↓  - to move        ║ ╎╎╎     ╎╎╎  ║                                   \n");
-	printf("        esc - to exit        ║              ║                                   \n");
-	printf("                             ║   ╳      ╳   ║                                   \n");
-	printf("                             ║     o  o     ║                                   \n");
-	printf("                             ╚══════╥╥══════╝                                   \n");
-	printf("                                    ╜╙                                          \n");
-	printf("                               LET'S PLAY? ;)                                   \n");
-	printf("                                                                                \n");
-	printf("              FROM THE CREATORS OF \"PONG\" ANG \"GAME OF LIFE\"                \n");
-	printf("        @timonade   @artanisv   @antwantu   @santiago   @clymeneb               \n");
-	printf("                        21-school_novosibirsk_2022                              \n");
-	printf("                                                                                \n");
-	printf("                              \033[2;5mpress any key....                                 \n");
-	press_any_key();
+    printf("\033c");
+    printf("                                                                                \n");
+    printf("                                                                                \n");
+    printf("                         \033[32mYOU ARE IN THE SUPER GAME                              \n");
+    printf("                                                                                \n");
+    printf("                                                                                \n");
+    printf("                  ╔═══╗   ╔═╗ ╔╗   ╔═══╗   ╔╗╔═╗   ╔═══╗                        \n");
+    printf("                  ║╔═╗║   ║║╚╗║║   ║╔═╗║   ║║║╔╝   ║╔══╝                        \n");
+    printf("                  ║╚══╗   ║╔╗╚╝║   ║║ ║║   ║╚╝╝    ║╚══╗                        \n");
+    printf("                  ╚══╗║   ║║╚╗║║   ║╚═╝║   ║╔╗║    ║╔══╝                        \n");
+    printf("                  ║╚═╝║   ║║ ║║║   ║╔═╗║   ║║║╚╗   ║╚══╗                        \n");
+    printf("                  ╚═══╝   ╚╝ ╚═╝   ╚╝ ╚╝   ╚╝╚═╝   ╚═══╝                        \n");
+    printf("                                                                                \n");
+    printf("   Controls:                 ╔══════════════╗                                   \n");
+    printf("   ← ↑ → ↓  - to move        ║ ╎╎╎     ╎╎╎  ║                                   \n");
+    printf("        esc - to exit        ║              ║                                   \n");
+    printf("                             ║   ╳      ╳   ║                                   \n");
+    printf("                             ║     o  o     ║                                   \n");
+    printf("                             ╚══════╥╥══════╝                                   \n");
+    printf("                                    ╜╙                                          \n");
+    printf("                               LET'S PLAY? ;)                                   \n");
+    printf("                                                                                \n");
+    printf("              FROM THE CREATORS OF \"PONG\" ANG \"GAME OF LIFE\"                \n");
+    printf("        @timonade   @artanisv   @antwantu   @santiago   @clymeneb               \n");
+    printf("                        21-school_novosibirsk_2022                              \n");
+    printf("                                                                                \n");
+    printf("                              \033[2;5mpress any key....                                 \n");
+    press_any_key();
 }
 
 void next_level() {
@@ -426,17 +430,18 @@ void next_level() {
 }
 
 long int get_delta_time(struct timespec time_start, struct timespec time_now, int direction) {
-    long int delta_time = (time_now.tv_sec - time_start.tv_sec) * 1e9 + (time_now.tv_nsec - time_start.tv_nsec);
+    long int delta_time = (time_now.tv_sec - time_start.tv_sec) * 1e9 +
+                          (time_now.tv_nsec - time_start.tv_nsec);
     if (direction == DIR_DOWN || direction == DIR_UP) {
         delta_time /= 1.5;
     }
-	return delta_time;
+    return delta_time;
 }
 
 void press_any_key() {
-	while(TRUE) {
-		char ch;
-		if (read(0, &ch, 1))
-			break;
-	}
+    while (TRUE) {
+        char ch;
+        if (read(0, &ch, 1))
+            break;
+    }
 }
